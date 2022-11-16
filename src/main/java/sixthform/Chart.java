@@ -61,7 +61,7 @@ public class Chart extends ApplicationFrame implements Data.DataListener
    private XYDataset createDataset( ) 
    {
       TimeSeries series1 = new TimeSeries("Average Bandwidth");
-      Map<String,Long> bandwidthData = data.GetBandwidth();
+      Map<String,Long> bandwidthData = data.GetAverageBandwidthByTime();
       for (String timestamp : bandwidthData.keySet())
       {
          Minute minute = new Minute(Integer.parseInt(timestamp.substring(2,4)), Integer.parseInt(timestamp.substring(0,2)), 1, 1, 1900);

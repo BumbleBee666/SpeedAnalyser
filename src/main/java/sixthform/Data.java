@@ -42,7 +42,10 @@ public class Data
     private List<DataListener> listeners = new ArrayList<>();
     public void register(DataListener listener)
     {
-        listeners.add(listener);
+        synchronized(listeners)
+        {
+            listeners.add(listener);
+        }
     }
 
     private TimerTask task = new TimerTask() 
@@ -61,27 +64,33 @@ public class Data
             // Tell listeners of any update.
             if (!newFiles.isEmpty())
             {
-                for (DataListener listener: listeners)
+                synchronized(listeners)
                 {
-                    listener.onUpdate();
+                    for (DataListener listener: listeners)
+                    {
+                        listener.onUpdate();
+                    }
                 }
             }
         }
     };
 
-    public Map<String, Long> GetBandwidth()
+    public Map<String, Long> GetAverageBandwidthByTime()
     {
         // Organise data into buckets by time.
         Map<String, List<Long>> bandwidthByTime = new TreeMap<>();
-        for (String timestamp : bandwidthData.keySet())
+        synchronized(bandwidthData)
         {
-            JSONObject download = (JSONObject) bandwidthData.get(timestamp).get("download");
-            Long bandwidth = ((Long) download.get("bandwidth")) / 125000L;
+            for (String timestamp : bandwidthData.keySet())
+            {
+                JSONObject download = (JSONObject) bandwidthData.get(timestamp).get("download");
+                Long bandwidth = ((Long) download.get("bandwidth")) / 125000L;
 
-            String time = timestamp.substring(8);
-            List<Long> bandwidthsForTime = bandwidthByTime.containsKey(time) ? bandwidthByTime.get(time) : new ArrayList<Long>();
-            bandwidthsForTime.add(bandwidth);
-            bandwidthByTime.put(time, bandwidthsForTime);
+                String time = timestamp.substring(8);
+                List<Long> bandwidthsForTime = bandwidthByTime.containsKey(time) ? bandwidthByTime.get(time) : new ArrayList<Long>();
+                bandwidthsForTime.add(bandwidth);
+                bandwidthByTime.put(time, bandwidthsForTime);
+            }
         }
 
         // Calculate average for each time bucket.
@@ -108,13 +117,16 @@ public class Data
                 if (timestamp != null)
                 {
                     timestamp = timestamp.substring(0,4) + timestamp.substring(5,7) + timestamp.substring(8,10) + timestamp.substring(11,13) + timestamp.substring(14,16);
-                    bandwidthData.put(timestamp, data);
+                    synchronized(bandwidthData)
+                    {
+                        bandwidthData.put(timestamp, data);
+                    }
                 }
             }
         }
         catch (ParseException e)
         {
-            System.out.println(e.getMessage());
+            // We expect these to occur where there is no result in the file.
         }
         catch (IOException e) 
         {
